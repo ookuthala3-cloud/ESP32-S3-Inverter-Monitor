@@ -38,6 +38,11 @@ jobs:
       - name: Build firmware
         run: |
           pio run -e esp32-s3-inverter
+      - name: Show TFT_eSPI crash area
+        run: |
+          echo "===== TFT_eSPI.cpp lines 65-95 ====="
+          sed -n '65,95p' \
+            .pio/libdeps/esp32-s3-inverter/TFT_eSPI/TFT_eSPI.cpp
 
       # ==========================================
       # Prepare firmware files

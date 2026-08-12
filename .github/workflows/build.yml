@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       # ==========================================
       # Checkout
       # ==========================================
@@ -33,16 +34,56 @@ jobs:
           pip install platformio esptool
 
       # ==========================================
-      # Build
+      # Build firmware
       # ==========================================
       - name: Build firmware
         run: |
           pio run -e esp32-s3-inverter
-      - name: Show TFT_eSPI crash area
+
+      # ==========================================
+      # TFT_eSPI low-level diagnostic
+      # ==========================================
+      - name: Show TFT_eSPI low level macros
         run: |
-          echo "===== TFT_eSPI.cpp lines 65-95 ====="
-          sed -n '65,95p' \
-            .pio/libdeps/esp32-s3-inverter/TFT_eSPI/TFT_eSPI.cpp
+          echo "======================================"
+          echo "SEARCH SET_BUS_WRITE_MODE"
+          echo "======================================"
+
+          grep -R -n "#define SET_BUS_WRITE_MODE" \
+            .pio/libdeps/esp32-s3-inverter/TFT_eSPI || true
+
+          echo ""
+          echo "======================================"
+          echo "SEARCH CS_L"
+          echo "======================================"
+
+          grep -R -n "#define CS_L" \
+            .pio/libdeps/esp32-s3-inverter/TFT_eSPI || true
+
+          echo ""
+          echo "======================================"
+          echo "SEARCH SPI_PORT"
+          echo "======================================"
+
+          grep -R -n "SPI_PORT" \
+            .pio/libdeps/esp32-s3-inverter/TFT_eSPI/Processors || true
+
+          echo ""
+          echo "======================================"
+          echo "SEARCH WRITE_PERI_REG"
+          echo "======================================"
+
+          grep -R -n "WRITE_PERI_REG" \
+            .pio/libdeps/esp32-s3-inverter/TFT_eSPI/Processors || true
+
+          echo ""
+          echo "======================================"
+          echo "ESP32-S3 PROCESSOR FILES"
+          echo "======================================"
+
+          find \
+            .pio/libdeps/esp32-s3-inverter/TFT_eSPI/Processors \
+            -type f | sort
 
       # ==========================================
       # Prepare firmware files
@@ -67,7 +108,7 @@ jobs:
              firmware/boot_app0.bin
 
       # ==========================================
-      # Create single FULL firmware
+      # Create FULL merged firmware
       # ==========================================
       - name: Create merged firmware
         run: |
@@ -86,7 +127,9 @@ jobs:
       # ==========================================
       - name: Show firmware files
         run: |
-          echo "Generated firmware files:"
+          echo "======================================"
+          echo "Generated firmware files"
+          echo "======================================"
           ls -lh firmware/
 
       # ==========================================

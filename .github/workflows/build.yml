@@ -24,12 +24,31 @@ jobs:
       - name: Build firmware
         run: pio run -e esp32-s3-inverter
 
-      - name: Prepare firmware files
+      - name: Create merged firmware
         run: |
           mkdir -p firmware
-          cp .pio/build/esp32-s3-inverter/firmware.bin firmware/Inverter-Monitor.bin
-          cp .pio/build/esp32-s3-inverter/bootloader.bin firmware/bootloader.bin
-          cp .pio/build/esp32-s3-inverter/partitions.bin firmware/partitions.bin
+
+          cp .pio/build/esp32-s3-inverter/firmware.bin \
+             firmware/Inverter-Monitor.bin
+
+          cp .pio/build/esp32-s3-inverter/bootloader.bin \
+             firmware/bootloader.bin
+
+          cp .pio/build/esp32-s3-inverter/partitions.bin \
+             firmware/partitions.bin
+
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+             firmware/boot_app0.bin
+
+          python -m esptool --chip esp32s3 merge_bin \
+            -o firmware/Inverter-Monitor-FULL.bin \
+            --flash_mode dio \
+            --flash_freq 80m \
+            --flash_size 16MB \
+            0x0000 .pio/build/esp32-s3-inverter/bootloader.bin \
+            0x8000 .pio/build/esp32-s3-inverter/partitions.bin \
+            0xE000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+            0x10000 .pio/build/esp32-s3-inverter/firmware.bin
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4

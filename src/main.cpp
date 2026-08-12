@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <SPI.h>
 #include <TFT_eSPI.h>
 
 TFT_eSPI tft = TFT_eSPI();
@@ -9,13 +10,26 @@ void setup()
     delay(1500);
 
     Serial.println();
-    Serial.println("===== TFT_eSPI TEST =====");
+    Serial.println("===== TFT_eSPI SPI TEST =====");
     Serial.println("BOOT OK");
 
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, TFT_BACKLIGHT_ON);
 
     Serial.println("BACKLIGHT OK");
+
+    // Explicitly initialise Arduino SPI first
+    Serial.println("Starting SPI...");
+
+    SPI.begin(
+        TFT_SCLK,   // GPIO 5
+        TFT_MISO,   // GPIO 41
+        TFT_MOSI,   // GPIO 6
+        TFT_CS      // GPIO 16
+    );
+
+    Serial.println("SPI BEGIN OK");
+
     delay(500);
 
     Serial.println("Starting TFT_eSPI...");
@@ -48,10 +62,8 @@ void setup()
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.drawString("MONITOR", 120, 100, 4);
 
-    tft.drawFastHLine(25, 125, 190, TFT_DARKGREY);
-
     tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    tft.drawString("TFT_eSPI OK", 120, 165, 4);
+    tft.drawString("TFT_eSPI OK", 120, 160, 4);
 
     Serial.println("DISPLAY TEST COMPLETE");
 }

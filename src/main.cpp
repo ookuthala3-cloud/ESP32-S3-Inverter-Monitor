@@ -1,31 +1,25 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 
-#define TFT_BL 7
-
 TFT_eSPI tft = TFT_eSPI();
 
 void setup()
 {
     Serial.begin(115200);
-    delay(1500);
+    delay(1000);
 
     Serial.println("BOOT OK");
 
     pinMode(TFT_BL, OUTPUT);
-    digitalWrite(TFT_BL, HIGH);
+    digitalWrite(TFT_BL, TFT_BACKLIGHT_ON);
 
     Serial.println("BACKLIGHT OK");
-
-    delay(300);
-
-    Serial.println("Starting TFT_eSPI...");
 
     tft.init();
 
     Serial.println("TFT_eSPI INIT OK");
 
-    tft.setRotation(0);
+    tft.setRotation(1);
 
     tft.fillScreen(TFT_RED);
     delay(1000);

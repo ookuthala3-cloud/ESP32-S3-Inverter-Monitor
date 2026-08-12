@@ -15,6 +15,7 @@ void setup()
 
     Serial.println("BACKLIGHT OK");
 
+    Serial.println("Starting TFT_eSPI...");
     tft.init();
 
     Serial.println("TFT_eSPI INIT OK");
@@ -22,13 +23,13 @@ void setup()
     tft.setRotation(1);
 
     tft.fillScreen(TFT_RED);
-    delay(1000);
+    delay(1500);
 
     tft.fillScreen(TFT_GREEN);
-    delay(1000);
+    delay(1500);
 
     tft.fillScreen(TFT_BLUE);
-    delay(1000);
+    delay(1500);
 
     tft.fillScreen(TFT_BLACK);
 

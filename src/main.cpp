@@ -57,41 +57,41 @@ void drawGauge(
   String unit,
   unsigned int decimals
 ) {
-  const int startAngle = 135;
-  const int endAngle   = 405;
+  const float startAngle = 135.0;
+  const float endAngle   = 405.0;
 
-  // background arc
-  for (int a = startAngle; a <= endAngle; a += 5) {
-
-    float rad = a * DEG_TO_RAD;
-
-    int x1 = cx + cos(rad) * (radius - 4);
-    int y1 = cy + sin(rad) * (radius - 4);
-
-    int x2 = cx + cos(rad) * radius;
-    int y2 = cy + sin(rad) * radius;
-
-    tft.drawLine(x1, y1, x2, y2, 0x4208);
-  }
+  // Fewer, clearer segments for the 240x240 LCD.
+  const int SEGMENTS = 18;
+  const float stepAngle = (endAngle - startAngle) / (SEGMENTS - 1);
 
   float normalized =
       constrain((value - minValue) / (maxValue - minValue), 0.0, 1.0);
 
-  int valueAngle =
-      startAngle + normalized * (endAngle - startAngle);
+  int activeSegments =
+      (int)round(normalized * (SEGMENTS - 1));
 
-  // active arc
-  for (int a = startAngle; a <= valueAngle; a += 4) {
+  for (int i = 0; i < SEGMENTS; i++) {
+    float angle = startAngle + (i * stepAngle);
+    float rad = angle * DEG_TO_RAD;
 
-    float rad = a * DEG_TO_RAD;
-
-    int x1 = cx + cos(rad) * (radius - 5);
-    int y1 = cy + sin(rad) * (radius - 5);
+    // Slightly longer segment marks, with visible gaps.
+    int x1 = cx + cos(rad) * (radius - 7);
+    int y1 = cy + sin(rad) * (radius - 7);
 
     int x2 = cx + cos(rad) * radius;
     int y2 = cy + sin(rad) * radius;
 
-    tft.drawLine(x1, y1, x2, y2, gaugeColor);
+    uint16_t color = (i <= activeSegments) ? gaugeColor : 0x4208;
+
+    // 2 px-ish thickness makes each separated mark easier to see.
+    tft.drawLine(x1, y1, x2, y2, color);
+
+    float rad2 = (angle + 1.8) * DEG_TO_RAD;
+    int xx1 = cx + cos(rad2) * (radius - 7);
+    int yy1 = cy + sin(rad2) * (radius - 7);
+    int xx2 = cx + cos(rad2) * radius;
+    int yy2 = cy + sin(rad2) * radius;
+    tft.drawLine(xx1, yy1, xx2, yy2, color);
   }
 
   // value

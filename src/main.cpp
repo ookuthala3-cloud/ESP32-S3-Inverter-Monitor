@@ -13,8 +13,20 @@ float frequencyHz   = 50.0;
 
 float batteryVolt   = 12.6;
 int   batteryPct    = 82;
+float batteryMinV   = 12.1;
+float batteryMaxV   = 13.8;
+float batteryAvgV   = 12.5;
+float batteryCurrent = 5.6;
 
 float inverterTemp  = 38.0;
+
+// =====================================================
+// PAGE CONTROL
+// =====================================================
+uint8_t currentPage = 0;
+const uint8_t PAGE_COUNT = 2;
+const unsigned long PAGE_INTERVAL = 15000UL;
+unsigned long lastPageChange = 0;
 
 // =====================================================
 // COLORS
@@ -307,6 +319,117 @@ void drawMainPage() {
   tft.print(" C");
 }
 
+
+// =====================================================
+// PAGE 2 - BATTERY & DC
+// =====================================================
+void drawBatteryPage() {
+  tft.fillScreen(COL_BG);
+
+  // Header
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextFont(2);
+  tft.setTextColor(COL_GREEN, COL_BG);
+  tft.drawString("BATTERY & DC", 120, 13);
+
+  tft.drawFastHLine(8, 28, 224, COL_BORDER);
+
+  // Large segmented battery gauge
+  drawGauge(
+    120, 84,
+    58,
+    batteryPct,
+    0,
+    100,
+    COL_GREEN,
+    "%",
+    0
+  );
+
+  // Battery voltage below the gauge
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextFont(2);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.drawString(String(batteryVolt, 1) + " V", 120, 119);
+
+  // MIN / MAX / AVG cards
+  const int cardY = 137;
+  const int cardW = 70;
+  const int cardH = 42;
+  const int cardX[3] = {8, 85, 162};
+  const char* labels[3] = {"MIN", "MAX", "AVG"};
+  float vals[3] = {batteryMinV, batteryMaxV, batteryAvgV};
+
+  for (int i = 0; i < 3; i++) {
+    tft.drawRoundRect(cardX[i], cardY, cardW, cardH, 4, COL_BORDER);
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextFont(1);
+    tft.setTextColor(COL_DIM, COL_BG);
+    tft.drawString(labels[i], cardX[i] + cardW / 2, cardY + 10);
+
+    tft.setTextFont(2);
+    tft.setTextColor(COL_TEXT, COL_BG);
+    tft.drawString(String(vals[i], 1) + "V",
+                   cardX[i] + cardW / 2, cardY + 28);
+  }
+
+  // Current label
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextFont(1);
+  tft.setTextColor(COL_DIM, COL_BG);
+  tft.drawString("DISCHARGE CURRENT", 10, 188);
+
+  tft.setTextDatum(TR_DATUM);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.drawString(String(batteryCurrent, 1) + " A", 230, 188);
+
+  // Segmented current bar
+  const int barX = 10;
+  const int barY = 203;
+  const int segW = 19;
+  const int segH = 9;
+  const int gap = 3;
+  const int barSegments = 10;
+  int active = constrain((int)round((batteryCurrent / 10.0) * barSegments),
+                         0, barSegments);
+
+  for (int i = 0; i < barSegments; i++) {
+    uint16_t c = (i < active) ? COL_GREEN : COL_BORDER;
+    tft.fillRoundRect(barX + i * (segW + gap), barY,
+                      segW, segH, 2, c);
+  }
+
+  // Status footer
+  tft.drawFastHLine(8, 219, 224, COL_BORDER);
+  drawBattery(12, 224, batteryPct);
+
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextFont(1);
+  tft.setTextColor(COL_DIM, COL_BG);
+  tft.drawString("STATUS", 68, 226);
+
+  tft.setTextColor(COL_GREEN, COL_BG);
+  tft.drawString("NORMAL", 108, 226);
+
+  tft.fillCircle(218, 231, 7, COL_GREEN);
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(TFT_BLACK, COL_GREEN);
+  tft.drawString("OK", 218, 231, 1);
+
+  tft.setTextDatum(TL_DATUM);
+}
+
+// =====================================================
+// PAGE RENDERER
+// =====================================================
+void drawCurrentPage() {
+  if (currentPage == 0) {
+    drawMainPage();
+  } else {
+    drawBatteryPage();
+  }
+}
+
 // =====================================================
 // SETUP
 // =====================================================
@@ -336,7 +459,9 @@ void setup() {
   // ST7789 color correction
   tft.setSwapBytes(true);
 
-  drawMainPage();
+  currentPage = 0;
+  drawCurrentPage();
+  lastPageChange = millis();
 
   Serial.println("Page 1 displayed");
 }
@@ -346,8 +471,16 @@ void setup() {
 // =====================================================
 void loop() {
 
-  // UI only test for now.
-  // Sensors + page rotation will be added next.
+  unsigned long now = millis();
 
-  delay(100);
+  if (now - lastPageChange >= PAGE_INTERVAL) {
+    lastPageChange = now;
+    currentPage = (currentPage + 1) % PAGE_COUNT;
+    drawCurrentPage();
+
+    Serial.print("Page displayed: ");
+    Serial.println(currentPage + 1);
+  }
+
+  delay(20);
 }

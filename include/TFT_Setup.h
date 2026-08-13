@@ -1,5 +1,6 @@
 #ifndef TFT_SETUP_H
 #define TFT_SETUP_H
+#define USE_HSPI_PORT
 
 // ==========================================
 // ST7789 240x240

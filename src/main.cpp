@@ -67,7 +67,7 @@ void drawGauge(
   float maxValue,
   uint16_t gaugeColor,
   String unit,
-  uint8_t decimals
+  unsigned int decimals
 ) {
   const int startAngle = 135;
   const int endAngle   = 405;

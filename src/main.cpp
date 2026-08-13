@@ -69,51 +69,47 @@ void drawGauge(
   String unit,
   unsigned int decimals
 ) {
-  const float startAngle = 135.0;
-  const float endAngle   = 405.0;
-
-  // Fewer, clearer segments for the 240x240 LCD.
-  const int SEGMENTS = 18;
-  const float stepAngle = (endAngle - startAngle) / (SEGMENTS - 1);
+  // Smooth 270-degree thick arc.
+  // TFT_eSPI drawArc uses 0 degrees at 12 o'clock, clockwise.
+  const int startAngle = 225;
+  const int sweepAngle = 270;
+  const int thickness  = (radius >= 45) ? 8 : 5;
 
   float normalized =
-      constrain((value - minValue) / (maxValue - minValue), 0.0, 1.0);
+      constrain((value - minValue) / (maxValue - minValue), 0.0f, 1.0f);
 
-  int activeSegments =
-      (int)round(normalized * (SEGMENTS - 1));
+  int activeSweep = (int)round(normalized * sweepAngle);
 
-  for (int i = 0; i < SEGMENTS; i++) {
-    float angle = startAngle + (i * stepAngle);
-    float rad = angle * DEG_TO_RAD;
+  auto drawArcPiece = [&](int fromAngle, int toAngle, uint16_t color) {
+    if (toAngle <= fromAngle) return;
 
-    // Slightly longer segment marks, with visible gaps.
-    int x1 = cx + cos(rad) * (radius - 7);
-    int y1 = cy + sin(rad) * (radius - 7);
+    while (fromAngle >= 360) {
+      fromAngle -= 360;
+      toAngle   -= 360;
+    }
 
-    int x2 = cx + cos(rad) * radius;
-    int y2 = cy + sin(rad) * radius;
+    if (toAngle <= 360) {
+      tft.drawArc(cx, cy, radius, radius - thickness,
+                  fromAngle, toAngle, color, COL_BG, true);
+    } else {
+      tft.drawArc(cx, cy, radius, radius - thickness,
+                  fromAngle, 360, color, COL_BG, true);
+      tft.drawArc(cx, cy, radius, radius - thickness,
+                  0, toAngle - 360, color, COL_BG, true);
+    }
+  };
 
-    uint16_t color = (i <= activeSegments) ? gaugeColor : 0x4208;
+  // Inactive/background arc first
+  drawArcPiece(startAngle, startAngle + sweepAngle, COL_BORDER);
 
-    // 2 px-ish thickness makes each separated mark easier to see.
-    tft.drawLine(x1, y1, x2, y2, color);
+  // Active arc on top
+  drawArcPiece(startAngle, startAngle + activeSweep, gaugeColor);
 
-    float rad2 = (angle + 1.8) * DEG_TO_RAD;
-    int xx1 = cx + cos(rad2) * (radius - 7);
-    int yy1 = cy + sin(rad2) * (radius - 7);
-    int xx2 = cx + cos(rad2) * radius;
-    int yy2 = cy + sin(rad2) * radius;
-    tft.drawLine(xx1, yy1, xx2, yy2, color);
-  }
-
-  // value
+  // Value and unit
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(TFT_WHITE, COL_BG);
+  tft.setTextColor(COL_TEXT, COL_BG);
   tft.setTextSize(1);
-
-  String valueText = String(value, decimals);
-
-  tft.drawString(valueText, cx, cy - 1, 2);
+  tft.drawString(String(value, decimals), cx, cy - 1, 2);
 
   tft.setTextColor(COL_DIM, COL_BG);
   tft.drawString(unit, cx, cy + 16, 1);
@@ -330,14 +326,14 @@ void drawBatteryPage() {
   tft.setTextDatum(MC_DATUM);
   tft.setTextFont(2);
   tft.setTextColor(COL_GREEN, COL_BG);
-  tft.drawString("BATTERY & DC", 120, 13);
+  tft.drawString("BATTERY & DC", 120, 12);
+  tft.drawFastHLine(8, 27, 224, COL_BORDER);
 
-  tft.drawFastHLine(8, 28, 224, COL_BORDER);
-
-  // Large segmented battery gauge
+  // Large smooth battery gauge.
+  // Radius/center chosen so the arc stays below the header divider.
   drawGauge(
-    120, 84,
-    58,
+    120, 78,
+    46,
     batteryPct,
     0,
     100,
@@ -346,75 +342,88 @@ void drawBatteryPage() {
     0
   );
 
-  // Battery voltage below the gauge
+  // Battery voltage
   tft.setTextDatum(MC_DATUM);
   tft.setTextFont(2);
   tft.setTextColor(COL_TEXT, COL_BG);
-  tft.drawString(String(batteryVolt, 1) + " V", 120, 119);
+  tft.drawString(String(batteryVolt, 1) + " V", 120, 111);
 
   // MIN / MAX / AVG cards
-  const int cardY = 137;
+  const int cardY = 124;
   const int cardW = 70;
-  const int cardH = 42;
+  const int cardH = 34;
   const int cardX[3] = {8, 85, 162};
   const char* labels[3] = {"MIN", "MAX", "AVG"};
   float vals[3] = {batteryMinV, batteryMaxV, batteryAvgV};
 
   for (int i = 0; i < 3; i++) {
     tft.drawRoundRect(cardX[i], cardY, cardW, cardH, 4, COL_BORDER);
+
     tft.setTextDatum(MC_DATUM);
     tft.setTextFont(1);
     tft.setTextColor(COL_DIM, COL_BG);
-    tft.drawString(labels[i], cardX[i] + cardW / 2, cardY + 10);
+    tft.drawString(labels[i], cardX[i] + cardW / 2, cardY + 9);
 
     tft.setTextFont(2);
     tft.setTextColor(COL_TEXT, COL_BG);
     tft.drawString(String(vals[i], 1) + "V",
-                   cardX[i] + cardW / 2, cardY + 28);
+                   cardX[i] + cardW / 2, cardY + 24);
   }
 
-  // Current label
+  // Current
   tft.setTextDatum(TL_DATUM);
   tft.setTextFont(1);
   tft.setTextColor(COL_DIM, COL_BG);
-  tft.drawString("DISCHARGE CURRENT", 10, 188);
+  tft.drawString("DISCHARGE CURRENT", 10, 165);
 
   tft.setTextDatum(TR_DATUM);
   tft.setTextColor(COL_TEXT, COL_BG);
-  tft.drawString(String(batteryCurrent, 1) + " A", 230, 188);
+  tft.drawString(String(batteryCurrent, 1) + " A", 230, 165);
 
-  // Segmented current bar
+  // Compact segmented current bar
   const int barX = 10;
-  const int barY = 203;
-  const int segW = 19;
-  const int segH = 9;
-  const int gap = 3;
+  const int barY = 178;
+  const int segW = 18;
+  const int segH = 8;
+  const int gap = 4;
   const int barSegments = 10;
-  int active = constrain((int)round((batteryCurrent / 10.0) * barSegments),
-                         0, barSegments);
+
+  int active = constrain(
+    (int)round((batteryCurrent / 10.0) * barSegments),
+    0,
+    barSegments
+  );
 
   for (int i = 0; i < barSegments; i++) {
     uint16_t c = (i < active) ? COL_GREEN : COL_BORDER;
-    tft.fillRoundRect(barX + i * (segW + gap), barY,
-                      segW, segH, 2, c);
+    tft.fillRoundRect(
+      barX + i * (segW + gap),
+      barY,
+      segW,
+      segH,
+      2,
+      c
+    );
   }
 
-  // Status footer
-  tft.drawFastHLine(8, 219, 224, COL_BORDER);
-  drawBattery(12, 224, batteryPct);
+  // Footer/status: fully inside 240x240
+  tft.drawFastHLine(8, 196, 224, COL_BORDER);
+
+  drawBattery(12, 207, batteryPct);
 
   tft.setTextDatum(TL_DATUM);
   tft.setTextFont(1);
   tft.setTextColor(COL_DIM, COL_BG);
-  tft.drawString("STATUS", 68, 226);
+  tft.drawString("STATUS", 68, 211);
 
   tft.setTextColor(COL_GREEN, COL_BG);
-  tft.drawString("NORMAL", 108, 226);
+  tft.drawString("NORMAL", 111, 211);
 
-  tft.fillCircle(218, 231, 7, COL_GREEN);
+  tft.fillCircle(218, 215, 7, COL_GREEN);
+
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(TFT_BLACK, COL_GREEN);
-  tft.drawString("OK", 218, 231, 1);
+  tft.drawString("OK", 218, 215, 1);
 
   tft.setTextDatum(TL_DATUM);
 }

@@ -35,24 +35,12 @@ float inverterTemp  = 38.0;
 // =====================================================
 // Helpers
 // =====================================================
-void drawCenteredText(
-  const String &text,
-  int x,
-  int y,
-  int width,
-  uint16_t color,
-  uint8_t size = 1
-) {
-  tft.setTextColor(color, COL_BG);
-  tft.setTextSize(size);
-
-  int16_t x1, y1;
-  uint16_t w, h;
-
-  tft.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
-
-  tft.setCursor(x + (width - w) / 2, y);
-  tft.print(text);
+void drawCenteredText(const String& text, int x, int y, int font,
+  uint16_t color, uint8_t datum) {
+  tft.setTextDatum(datum);
+  tft.setTextFont(font);
+  tft.setTextColor(color);
+  tft.drawString(text, x, y);
 }
 
 // =====================================================
